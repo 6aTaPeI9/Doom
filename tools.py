@@ -36,3 +36,7 @@ def calc_sin(degree):
 @lru_cache(maxsize=2048)
 def calc_cos(degree):
     return math.cos(math.radians(degree))
+
+@lru_cache(maxsize=2048)
+def calc_tan(degree):
+    return math.tan(math.radians(degree))

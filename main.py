@@ -39,24 +39,24 @@ class GameCanvas(Canvas):
 
     def key_pressed(self, event):
         if event.char == 'a':
-            self.view_degree += VIEW_STEP
-        elif event.char == 'd':
             self.view_degree -= VIEW_STEP
+        elif event.char == 'd':
+            self.view_degree += VIEW_STEP
         elif event.char == 's':
             self.step_straight(-STEP)
         elif event.char == 'w':
             self.step_straight(STEP)
 
+        self.drawing_loop()
+
 
     def step_straight(self, step: int):
-        real_degree = self.view_degree
-        rad_degree = math.radians(real_degree)
-        step_y = math.sin(rad_degree) * step
-        step_x = math.cos(rad_degree) * step
+        step_x = calc_cos(self.view_degree) * step
+        step_y = calc_sin(self.view_degree) * step
 
-        if self.map[int(self.center_y - step_y) // SCALE][int(self.center_x + step_x) // SCALE] == CeillType.EMPTY:
+        if self.map[int(self.center_y + step_y) // SCALE][int(self.center_x + step_x) // SCALE] == CeillType.EMPTY:
             self.center_x += step_x
-            self.center_y -= step_y
+            self.center_y += step_y
 
 
     def draw_mini_map(self):
@@ -69,8 +69,10 @@ class GameCanvas(Canvas):
         mini_map_height = self.height * MINI_MAP_SCALE
 
         # Размеры одной клетки мини-карты
-        ceil_width = mini_map_widht / map_width
-        ceil_height = mini_map_height / map_height
+        # ceil_width = mini_map_widht / map_width
+        # ceil_height = mini_map_height / map_height
+        ceil_width = SCALE
+        ceil_height = SCALE
 
         # Точка от которой будет рисоваться миникарта
         start_y = self.height - mini_map_height
@@ -127,8 +129,8 @@ class GameCanvas(Canvas):
         self.create_line(
             mini_map_pos_x,
             mini_map_pos_y,
-            mini_map_pos_x + math.cos(math.radians(avg_degree)) * (VIEW_RADIUS * self.scale_width_coeff * MINI_MAP_SCALE),
-            mini_map_pos_y - math.sin(math.radians(avg_degree)) * (VIEW_RADIUS * self.scale_width_coeff * MINI_MAP_SCALE),
+            mini_map_pos_x + calc_cos(avg_degree) * (VIEW_RADIUS * self.scale_width_coeff * MINI_MAP_SCALE),
+            mini_map_pos_y + calc_sin(avg_degree) * (VIEW_RADIUS * self.scale_width_coeff * MINI_MAP_SCALE),
             fill='white'
         )
 
@@ -140,18 +142,62 @@ class GameCanvas(Canvas):
         # sin - лево/право
         # cos - верх/низ
 
-        curent_angel = self.view_degree
+        curent_angel = self.view_degree - DEFAULT_FOV // 2
         ray_len = 50
-        print(RAYS_COUNT)
+        circl_radius = 2
+        
+        xm = (self.center_x // SCALE) * SCALE
+        ym = (self.center_y // SCALE) * SCALE
+
         for ray in range(RAYS_COUNT):
-            x = calc_sin(curent_angel) * ray_len
-            y = calc_cos(curent_angel) * ray_len
+            cos_a = calc_cos(curent_angel)
+            sin_a = calc_sin(curent_angel)
+
+            x = cos_a * ray_len
+            y = sin_a * ray_len
+
+            if cos_a > 0:
+                x_dx = 1
+                near_x = xm + SCALE
+            else:
+                x_dx = -1
+                near_x = xm
+
+            for i in range(3):
+                vert_dist = abs(self.center_x - near_x)
+                x_dy = self.center_y + vert_dist * calc_tan(curent_angel) * x_dx
+                self.create_oval(
+                    near_x - circl_radius,
+                    x_dy - circl_radius,
+                    near_x + circl_radius,
+                    x_dy + circl_radius,
+                    fill='white'
+                )
+                near_x += SCALE
+
+            # horiz_dist = self.center_y - near_y
+
+            # if sin_a > 0:
+            #     y_dx = 1
+            #     near_y = ym + SCALE
+            # else:
+            #     y_dx = -1
+            #     near_y = ym
+
+            # self.create_oval(
+            #     self.center_x * self.scale_width_coeff - circl_radius,
+            #     near_y * self.scale_height_coeff - circl_radius,
+            #     self.center_x * self.scale_width_coeff + circl_radius,
+            #     near_y * self.scale_height_coeff + circl_radius,
+            #     fill='white'
+            # )
+
 
             self.create_line(
-                self.center_x * self.scale_width_coeff,
-                self.center_y * self.scale_height_coeff,
-                self.center_x * self.scale_width_coeff + x,
-                self.center_y * self.scale_height_coeff + y,
+                self.center_x,
+                self.center_y,
+                self.center_x + x,
+                self.center_y + y,
                 fill='red'
             )
 
@@ -167,7 +213,7 @@ class GameCanvas(Canvas):
     def drawing_loop(self):
         self.delete(ALL)
         self.redraw_evet()
-        self.after(1, self.drawing_loop)
+        # self.after(1, self.drawing_loop)
 
 
     def on_resize(self, event):
@@ -184,8 +230,8 @@ class GameCanvas(Canvas):
         self.config(width=self.width, height=self.height)
 
         # Отношение масштабированного размера карты к размеру экрана
-        self.scale_width_coeff = self.width / self.scaled_width
-        self.scale_height_coeff = self.height / self.scaled_height
+        self.scale_width_coeff = 1
+        self.scale_height_coeff = 1
 
 
 if __name__ == '__main__':
