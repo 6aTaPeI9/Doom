@@ -2,6 +2,8 @@
     Модуль содержащий игровое поле.
 """
 
+from config import SCALE
+
 MAP = [
     "##############",
     "#...#........#",
@@ -18,7 +20,14 @@ MAP = [
     "##############",
 ]
 
+MAP_SET = set()
 
+for idy, y_val in enumerate(MAP):
+    for idx, x_val in enumerate(y_val):
+        if not x_val == '#':
+            continue
+
+        MAP_SET.add((idx, idy))
 
 # MAP = [
 #     '############',

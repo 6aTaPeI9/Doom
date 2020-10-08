@@ -4,7 +4,7 @@ import math
 from tkinter import Canvas, Tk, Frame, BOTH, YES, ALL, PhotoImage, Label, NW
 from config import *
 from tools import *
-from map_static import MAP
+from map_static import MAP, MAP_SET
 from PIL import ImageTk, Image
 from collections import deque
 
@@ -29,6 +29,7 @@ class GameCanvas(Canvas):
 
         self.focus_set()
         self.map = MAP
+        self.map_set = MAP_SET
         self.view_degree = START_VIEW_DEGREE
         self.view_range = DEFAULT_FOV
 
@@ -47,7 +48,7 @@ class GameCanvas(Canvas):
         elif event.char == 'w':
             self.step_straight(STEP)
 
-        self.drawing_loop()
+        # self.drawing_loop()
 
 
     def step_straight(self, step: int):
@@ -59,7 +60,7 @@ class GameCanvas(Canvas):
             self.center_y += step_y
 
 
-    def draw_mini_map(self):
+    def draw_mini_map(self, ceils: list):
         # не масштабированные размеры карты
         map_height = len(self.map)
         map_width = len(self.map[0])
@@ -82,37 +83,48 @@ class GameCanvas(Canvas):
         ceil_dx = ceil_width + start_x
         ceil_dy = ceil_height + start_y
 
-        for idy, row in enumerate(self.map):
-            ceil_y = idy * ceil_dy
-            self.create_line(
-                    start_x,
-                    ceil_y,
-                    0 + mini_map_widht,
-                    ceil_y,
-                    fill='green'
-                )
-            for idx, ceil in enumerate(row):
-                ceil_x = idx * ceil_dx
+        if True:
+            for idy, row in enumerate(self.map):
+                ceil_y = idy * ceil_dy
                 self.create_line(
-                    ceil_x,
-                    ceil_y,
-                    ceil_x,
-                    ceil_y + mini_map_height,
-                    fill='green'
-                )
-
-                if ceil == CeillType.EMPTY:
-                    continue
-                elif ceil == CeillType.WALL:
-
-                    # Верняя левая точка клетки
-                    self.create_rectangle(
+                        start_x,
+                        ceil_y,
+                        0 + mini_map_widht,
+                        ceil_y,
+                        fill='green'
+                    )
+                for idx, ceil in enumerate(row):
+                    ceil_x = idx * ceil_dx
+                    self.create_line(
                         ceil_x,
                         ceil_y,
-                        ceil_x + ceil_width,
-                        ceil_y + ceil_height,
-                        fill='white'
+                        ceil_x,
+                        ceil_y + mini_map_height,
+                        fill='green'
                     )
+
+                    if ceil == CeillType.EMPTY:
+                        continue
+                    elif ceil == CeillType.WALL:
+
+                        # Верняя левая точка клетки
+                        self.create_rectangle(
+                            ceil_x,
+                            ceil_y,
+                            ceil_x + ceil_width,
+                            ceil_y + ceil_height,
+                            fill='white'
+                        )
+
+        if ceils:
+            for idx, idy in ceils:
+                self.create_rectangle(
+                    idx * ceil_dx,
+                    idy * ceil_dy,
+                    idx * ceil_dx + ceil_width,
+                    idy * ceil_dy + ceil_height,
+                    fill='red'
+                )
 
         # Рисуем границу мини-карты
         self.create_rectangle(
@@ -137,7 +149,6 @@ class GameCanvas(Canvas):
 
     def redraw_evet(self):
         start_time = time.time()
-        self.draw_mini_map()
 
         # sin - лево/право
         # cos - верх/низ
@@ -145,13 +156,19 @@ class GameCanvas(Canvas):
         curent_angel = self.view_degree - DEFAULT_FOV // 2
         ray_len = 50
         circl_radius = 2
-        
+
         xm = (self.center_x // SCALE) * SCALE
         ym = (self.center_y // SCALE) * SCALE
 
+        ceils = []
+
         for ray in range(RAYS_COUNT):
-            cos_a = calc_cos(curent_angel) or 0.0000001
-            sin_a = calc_sin(curent_angel) or 0.0000001
+            cos_a = calc_cos(curent_angel) or 0.000001
+            sin_a = calc_sin(curent_angel) or 0.000001
+
+
+            x = cos_a * ray_len
+            y = sin_a * ray_len
 
             if cos_a >= 0:
                 # луч направлен вверх
@@ -163,17 +180,20 @@ class GameCanvas(Canvas):
                 dx = -1
                 x_h = xm
 
-            for i in range(6):
-                # Расстояние до ближайшей вертикальной стены и пересечение лучем вертикальной стены по y
-                y_h = self.center_y + (x_h - self.center_x) * calc_tan(curent_angel)
-                self.create_oval(
-                    x_h - circl_radius,
-                    y_h - circl_radius,
-                    x_h + circl_radius,
-                    y_h + circl_radius,
-                    fill='white'
-                )
+            for i in range(0, self.scaled_width, SCALE):
+                deepth_h = (x_h - self.center_x) / cos_a
+                y_h = self.center_y + deepth_h * sin_a
 
+                if ((x_h + dx) // SCALE, y_h // SCALE) in self.map_set:
+                    break
+
+                # self.create_oval(
+                #     x_h - circl_radius,
+                #     y_h - circl_radius,
+                #     x_h + circl_radius,
+                #     y_h + circl_radius,
+                #     fill='red'
+                # )
                 x_h += (SCALE * dx)
 
 
@@ -187,28 +207,45 @@ class GameCanvas(Canvas):
                 dy = -1
                 y_v = ym
 
-            for i in range(6):
+            for i in range(0, self.scaled_height, SCALE):
                 # Расстояние до ближайшей вертикальной стены и пересечение лучем вертикальной стены по y
-                x_v = self.center_x + (y_v - self.center_y) / sin_a * cos_a
-                self.create_oval(
-                    x_v - circl_radius,
-                    y_v - circl_radius,
-                    x_v + circl_radius,
-                    y_v + circl_radius,
-                    fill='white'
-                )
+                deepth_v = (y_v - self.center_y) / sin_a
+                x_v = self.center_x + deepth_v * cos_a
+
+                if (x_v // SCALE, (y_v + dy) // SCALE) in self.map_set:
+                    break
+
+                # self.create_oval(
+                #     x_v - circl_radius,
+                #     y_v - circl_radius,
+                #     x_v + circl_radius,
+                #     y_v + circl_radius,
+                #     fill='red'
+                # )
 
                 y_v += (SCALE * dy)
 
-            # self.create_line(
-            #     self.center_x,
-            #     self.center_y,
-            #     self.center_x + x,
-            #     self.center_y + y,
-            #     fill='red'
-            # )
+            deepth = deepth_h if deepth_h < deepth_v else deepth_v
+
+            self.create_line(
+                self.center_x,
+                self.center_y,
+                self.center_x + deepth * cos_a,
+                self.center_y + deepth * sin_a,
+                fill='red'
+            )
+
+            self.create_line(
+                self.center_x,
+                self.center_y,
+                self.center_x + x,
+                self.center_y + y,
+                fill='red'
+            )
 
             curent_angel += RAY_FREQ
+
+        self.draw_mini_map(ceils)
 
         self.create_text(
             self.width - 25,
@@ -220,7 +257,7 @@ class GameCanvas(Canvas):
     def drawing_loop(self):
         self.delete(ALL)
         self.redraw_evet()
-        # self.after(1, self.drawing_loop)
+        self.after(1, self.drawing_loop)
 
 
     def on_resize(self, event):
