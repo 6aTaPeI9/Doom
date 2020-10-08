@@ -150,56 +150,63 @@ class GameCanvas(Canvas):
         ym = (self.center_y // SCALE) * SCALE
 
         for ray in range(RAYS_COUNT):
-            cos_a = calc_cos(curent_angel)
-            sin_a = calc_sin(curent_angel)
+            cos_a = calc_cos(curent_angel) or 0.0000001
+            sin_a = calc_sin(curent_angel) or 0.0000001
 
-            x = cos_a * ray_len
-            y = sin_a * ray_len
-
-            if cos_a > 0:
-                x_dx = 1
-                near_x = xm + SCALE
+            if cos_a >= 0:
+                # луч направлен вверх
+                dx = 1
+                # X по горизонтали
+                x_h = xm + SCALE
             else:
-                x_dx = -1
-                near_x = xm
+                # луч направлен вниз
+                dx = -1
+                x_h = xm
 
-            for i in range(3):
-                vert_dist = abs(self.center_x - near_x)
-                x_dy = self.center_y + vert_dist * calc_tan(curent_angel) * x_dx
+            for i in range(6):
+                # Расстояние до ближайшей вертикальной стены и пересечение лучем вертикальной стены по y
+                y_h = self.center_y + (x_h - self.center_x) * calc_tan(curent_angel)
                 self.create_oval(
-                    near_x - circl_radius,
-                    x_dy - circl_radius,
-                    near_x + circl_radius,
-                    x_dy + circl_radius,
+                    x_h - circl_radius,
+                    y_h - circl_radius,
+                    x_h + circl_radius,
+                    y_h + circl_radius,
                     fill='white'
                 )
-                near_x += SCALE
 
-            # horiz_dist = self.center_y - near_y
+                x_h += (SCALE * dx)
 
-            # if sin_a > 0:
-            #     y_dx = 1
-            #     near_y = ym + SCALE
-            # else:
-            #     y_dx = -1
-            #     near_y = ym
 
-            # self.create_oval(
-            #     self.center_x * self.scale_width_coeff - circl_radius,
-            #     near_y * self.scale_height_coeff - circl_radius,
-            #     self.center_x * self.scale_width_coeff + circl_radius,
-            #     near_y * self.scale_height_coeff + circl_radius,
-            #     fill='white'
+            if sin_a >= 0:
+                # луч направлен вверх
+                dy = 1
+                # X по горизонтали
+                y_v = ym + SCALE
+            else:
+                # луч направлен вниз
+                dy = -1
+                y_v = ym
+
+            for i in range(6):
+                # Расстояние до ближайшей вертикальной стены и пересечение лучем вертикальной стены по y
+                x_v = self.center_x + (y_v - self.center_y) / sin_a * cos_a
+                self.create_oval(
+                    x_v - circl_radius,
+                    y_v - circl_radius,
+                    x_v + circl_radius,
+                    y_v + circl_radius,
+                    fill='white'
+                )
+
+                y_v += (SCALE * dy)
+
+            # self.create_line(
+            #     self.center_x,
+            #     self.center_y,
+            #     self.center_x + x,
+            #     self.center_y + y,
+            #     fill='red'
             # )
-
-
-            self.create_line(
-                self.center_x,
-                self.center_y,
-                self.center_x + x,
-                self.center_y + y,
-                fill='red'
-            )
 
             curent_angel += RAY_FREQ
 

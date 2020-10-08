@@ -21,7 +21,7 @@ SCALE = 30
 MINI_MAP_SCALE = 1
 
 # Частота бросания лучшей.
-RAY_FREQ = 15
+RAY_FREQ = 5
 
 # Кол-во бросаемых лучей в области видимости
 RAYS_COUNT = int(DEFAULT_FOV // RAY_FREQ)
