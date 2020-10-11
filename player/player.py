@@ -2,7 +2,7 @@
     Модуль содержит реализацию класса игрока
 """
 
-from tools import calc_cos, calc_sin
+from tools import calc_cos, calc_sin, calc_tan
 from player.direction import Step, Rotate
 
 class Player:
@@ -26,6 +26,8 @@ class Player:
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.rotation_speed = rotation_speed
+        self.rays_count = 360 # TODO Вынести куда нибудь
+        self.proj_dist = PROJ_DIST = self.rays_count / (2 * calc_tan(self.fov / 2)) # TODO Вынести куда нибудь
 
 
     def get_position(self):

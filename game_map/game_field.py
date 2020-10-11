@@ -22,6 +22,7 @@ class GameField:
         self.rel_height = len(self.map)
 
         self.mm_scale = mini_map_scale
+        self._generate_map_set()
 
 
     def _generate_map_set(self) -> None:
@@ -29,11 +30,11 @@ class GameField:
             Метод генерирует сет из всех стен карты
         """
         for row_id, row in enumerate(self.map):
-            for ceil_id, ceil in enumerate(y_val):
-                if not ceil == CeillType.WALL:
-                    continue
+            for ceil_id, ceil in enumerate(row):
+                    if not ceil == CeillType.WALL:
+                        continue
 
-                self.map_set.add((row_id, ceil_id))
+                    self.map_set.add((ceil_id, row_id))
 
         return
 
@@ -43,8 +44,9 @@ class GameField:
             Валидация перемещения игрока
         """
         next_pos = player.make_step(direct)
+        br = self.check_barrier(*next_pos)
 
-        if not self.check_barrier(*next_pos):
+        if not br:
             player.confirm_step(*next_pos)
 
         return
@@ -57,7 +59,7 @@ class GameField:
         return (int(x // self.scale), int(y // self.scale))
 
 
-    def check_barrier(self, x, y, scale: bool = False):
+    def check_barrier(self, x, y, scale: bool = True):
         """
             Проверка координат на наличие препятствия
         """

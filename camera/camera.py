@@ -76,92 +76,77 @@ class Camera:
     def redraw_evet(self):
         start_time = time.time()
 
-        # # sin - лево/право
-        # # cos - верх/низ
+        curent_angel = self.player.angle - self.player.fov // 2
+        ray_len = 50
 
-        # # curent_angel = self.view_degree - DEFAULT_FOV // 2
-        # ray_len = 50
-        # circl_radius = 2
+        xm = (self.player.pos_x // self.map.scale) * self.map.scale
+        ym = (self.player.pos_y // self.map.scale) * self.map.scale
 
-        # xm = (self.center_x // SCALE) * SCALE
-        # ym = (self.center_y // SCALE) * SCALE
-
-        # ceils = []
-
-        # for ray in range(RAYS_COUNT):
-        #     cos_a = calc_cos(curent_angel) or 0.000001
-        #     sin_a = calc_sin(curent_angel) or 0.000001
+        for ray in range(self.player.rays_count):
+            cos_a = calc_cos(curent_angel) or 0.000001
+            sin_a = calc_sin(curent_angel) or 0.000001
 
 
-        #     x = cos_a * ray_len
-        #     y = sin_a * ray_len
+            x = cos_a * ray_len
+            y = sin_a * ray_len
 
-        #     if cos_a >= 0:
-        #         # луч направлен вверх
-        #         dx = 1
-        #         # X по горизонтали
-        #         x_h = xm + SCALE
-        #     else:
-        #         # луч направлен вниз
-        #         dx = -1
-        #         x_h = xm
+            if cos_a >= 0:
+                # луч направлен влево
+                dx = 1
+                # X по горизонтали
+                x_h = xm + self.map.scale
+            else:
+                # луч направлен вправо
+                dx = -1
+                x_h = xm
 
-        #     for i in range(0, self.scaled_width, SCALE):
-        #         deepth_h = (x_h - self.center_x) / cos_a
-        #         y_h = self.center_y + deepth_h * sin_a
+            for i in range(0, self.map.scaled_width, self.map.scale):
+                # Вычисляем расстояние луча до ближайшего пересечения
+                deepth_h = (x_h - self.player.pos_x) / cos_a
+                y_h = self.player.pos_y + deepth_h * sin_a
 
-        #         if ((x_h + dx) // SCALE, y_h // SCALE) in self.map_set:
-        #             break
+                if self.map.check_barrier((x_h + dx), y_h, True):
+                    break
 
-        #         # self.canvas.create_oval(
-        #         #     x_h - circl_radius,
-        #         #     y_h - circl_radius,
-        #         #     x_h + circl_radius,
-        #         #     y_h + circl_radius,
-        #         #     fill='red'
-        #         # )
-        #         x_h += (SCALE * dx)
+                x_h += (self.map.scale * dx)
 
 
-        #     if sin_a >= 0:
-        #         # луч направлен вверх
-        #         dy = 1
-        #         # X по горизонтали
-        #         y_v = ym + SCALE
-        #     else:
-        #         # луч направлен вниз
-        #         dy = -1
-        #         y_v = ym
+            if sin_a >= 0:
+                # луч направлен вверх
+                dy = 1
+                # X по горизонтали
+                y_v = ym + self.map.scale
+            else:
+                # луч направлен вниз
+                dy = -1
+                y_v = ym
 
-        #     for i in range(0, self.scaled_height, SCALE):
-        #         # Расстояние до ближайшей вертикальной стены и пересечение лучем вертикальной стены по y
-        #         deepth_v = (y_v - self.center_y) / sin_a
-        #         x_v = self.center_x + deepth_v * cos_a
+            for i in range(0, self.map.scaled_height, self.map.scale):
+                # Расстояние до ближайшей вертикальной стены и пересечение лучем вертикальной стены по y
+                deepth_v = (y_v - self.player.pos_y) / sin_a
+                x_v = self.player.pos_x + deepth_v * cos_a
 
-        #         if (x_v // SCALE, (y_v + dy) // SCALE) in self.map_set:
-        #             break
+                if self.map.check_barrier(x_v, (y_v + dy), True):
+                    break
 
-        #         # self.canvas.create_oval(
-        #         #     x_v - circl_radius,
-        #         #     y_v - circl_radius,
-        #         #     x_v + circl_radius,
-        #         #     y_v + circl_radius,
-        #         #     fill='red'
-        #         # )
+                y_v += (self.map.scale * dy)
 
-        #         y_v += (SCALE * dy)
+            deepth = deepth_h if deepth_h < deepth_v else deepth_v
+            deepth *= calc_cos(self.player.angle - curent_angel)
+            proj_height = max((3 * self.player.proj_dist * self.map.scale) / deepth, 0.00001)
 
-        #     deepth = deepth_h if deepth_h < deepth_v else deepth_v
+            win_scale = self.map.win_width / self.player.rays_count
 
-        #     self.canvas.create_line(
-        #         self.center_x,
-        #         self.center_y,
-        #         self.center_x + deepth * cos_a,
-        #         self.center_y + deepth * sin_a,
-        #         fill='red'
-        #     )
+            self.canvas.create_rectangle(
+                ray * win_scale,
+                (self.map.win_height // 2) - proj_height // 2,
+                ray * win_scale + win_scale,
+                (self.map.win_height // 2) - proj_height // 2 + proj_height,
+                fill='gray',
+                outline=''
+            )
 
-        #     curent_angel += RAY_FREQ
+            curent_angel += self.player.fov / self.player.rays_count
 
         self.draw_mini_map()
 
