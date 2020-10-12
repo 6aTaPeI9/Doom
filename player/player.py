@@ -26,8 +26,8 @@ class Player:
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.rotation_speed = rotation_speed
-        self.rays_count = 360 # TODO Вынести куда нибудь
-        self.proj_dist = PROJ_DIST = self.rays_count / (2 * calc_tan(self.fov / 2)) # TODO Вынести куда нибудь
+        self.rays_count = 260 # TODO Вынести куда нибудь
+        self.proj_dist = self.rays_count / (2 * calc_tan(self.fov / 2)) # TODO Вынести куда нибудь
 
 
     def get_position(self):

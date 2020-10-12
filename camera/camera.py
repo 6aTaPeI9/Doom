@@ -4,6 +4,8 @@
 
 import time
 
+from functools import lru_cache
+from tkinter import NW
 from PIL import ImageTk, Image
 from tools import calc_cos, calc_sin
 from game_map.walls import CeillType
@@ -14,6 +16,10 @@ class Camera:
         self.map = game_obj.map
         self.canvas = game_obj
         self.player = game_obj.player
+        self.image_links = []
+        self.picture = Image.open(r'game_map/textures/wall1.png')
+        self.texture_scale = 64 / self.map.scale
+        self.win_scale = int(self.map.win_width / self.player.rays_count)
 
 
     def draw_mini_map(self):
@@ -72,6 +78,19 @@ class Camera:
             fill='red'
         )
 
+    # @lru_cache(maxsize=10240 * 10)
+    def get_image(self, width, height: int):
+        img = self.picture.crop((
+            width,
+            0,
+            width + self.win_scale,
+            128
+        ))
+
+        img = img.resize((self.win_scale, height), Image.ADAPTIVE)
+        img = ImageTk.PhotoImage(img, Image.ANTIALIAS)
+        return img
+
 
     def redraw_evet(self):
         start_time = time.time()
@@ -81,6 +100,7 @@ class Camera:
 
         xm = (self.player.pos_x // self.map.scale) * self.map.scale
         ym = (self.player.pos_y // self.map.scale) * self.map.scale
+        self.image_links = []
 
         for ray in range(self.player.rays_count):
             cos_a = calc_cos(curent_angel) or 0.000001
@@ -100,7 +120,7 @@ class Camera:
                 dx = -1
                 x_h = xm
 
-            for i in range(0, self.map.scaled_width, self.map.scale):
+            for _ in range(0, self.map.scaled_width, self.map.scale):
                 # Вычисляем расстояние луча до ближайшего пересечения
                 deepth_h = (x_h - self.player.pos_x) / cos_a
                 y_h = self.player.pos_y + deepth_h * sin_a
@@ -121,7 +141,7 @@ class Camera:
                 dy = -1
                 y_v = ym
 
-            for i in range(0, self.map.scaled_height, self.map.scale):
+            for _ in range(0, self.map.scaled_height, self.map.scale):
                 # Расстояние до ближайшей вертикальной стены и пересечение лучем вертикальной стены по y
                 deepth_v = (y_v - self.player.pos_y) / sin_a
                 x_v = self.player.pos_x + deepth_v * cos_a
@@ -131,19 +151,25 @@ class Camera:
 
                 y_v += (self.map.scale * dy)
 
-            deepth = deepth_h if deepth_h < deepth_v else deepth_v
+            deepth, offset = (deepth_h, y_h) if deepth_h < deepth_v else (deepth_v, x_v)
+
             deepth *= calc_cos(self.player.angle - curent_angel)
             proj_height = max((3 * self.player.proj_dist * self.map.scale) / deepth, 0.00001)
 
-            win_scale = self.map.win_width / self.player.rays_count
+            # self.canvas.create_rectangle(
+            #     ray * self.win_scale,
+            #     (self.map.win_height // 2) - proj_height // 2,
+            #     ray * self.win_scale + self.win_scale,
+            #     (self.map.win_height // 2) - proj_height // 2 + proj_height,
+            #     fill='gray',
+            #     outline=''
+            # )
 
-            self.canvas.create_rectangle(
-                ray * win_scale,
-                (self.map.win_height // 2) - proj_height // 2,
-                ray * win_scale + win_scale,
-                (self.map.win_height // 2) - proj_height // 2 + proj_height,
-                fill='gray',
-                outline=''
+            texture_width = int((int(offset) % self.map.scale) * self.texture_scale)
+            self.image_links.append(self.get_image(texture_width, int(proj_height)))
+
+            self.canvas.create_image(
+                (ray * self.win_scale, (self.map.win_height // 2) - proj_height // 2), anchor=NW, image=self.image_links[ray]
             )
 
             curent_angel += self.player.fov / self.player.rays_count
