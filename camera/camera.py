@@ -3,11 +3,12 @@
 """
 
 import time
+import math
 
 from functools import lru_cache
 from tkinter import NW
 from PIL import ImageTk, Image
-from tools import calc_cos, calc_sin
+from tools import calc_cos, calc_sin, circl_coords
 from game_map.walls import CeillType
 
 
@@ -17,8 +18,8 @@ class Camera:
         self.canvas = game_obj
         self.player = game_obj.player
         self.image_links = []
-        self.picture = Image.open(r'game_map/textures/wall1.png')
-        self.texture_scale = 64 / self.map.scale
+        self.picture = Image.open(r'game_map/textures/wall3.png')
+        self.texture_scale = 2
         self.win_scale = int(self.map.win_width / self.player.rays_count)
 
 
@@ -78,29 +79,43 @@ class Camera:
             fill='red'
         )
 
-    # @lru_cache(maxsize=10240 * 10)
-    def get_image(self, width, height: int):
-        img = self.picture.crop((
+    @lru_cache(maxsize=2048)
+    def crop_image(self, width):
+        return self.picture.crop((
             width,
             0,
             width + self.win_scale,
             128
         ))
 
-        img = img.resize((self.win_scale, height), Image.ADAPTIVE)
+
+    # @lru_cache(maxsize=1024)
+    def get_image(self, width, height: int):
+        img = self.crop_image(width)
+        img = img.resize((self.win_scale, height))
         img = ImageTk.PhotoImage(img, Image.ANTIALIAS)
         return img
 
 
+    def get_line_lenght(self, x1, y1, x2, y2):
+        """
+            Метод возвращает длину отрезка по двум точкам
+        """
+        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+
     def redraw_evet(self):
         start_time = time.time()
+        self.draw_mini_map()
 
         curent_angel = self.player.angle - self.player.fov // 2
         ray_len = 50
 
         xm = (self.player.pos_x // self.map.scale) * self.map.scale
         ym = (self.player.pos_y // self.map.scale) * self.map.scale
+
         self.image_links = []
+        drawed_walls = []
 
         for ray in range(self.player.rays_count):
             cos_a = calc_cos(curent_angel) or 0.000001
@@ -151,10 +166,98 @@ class Camera:
 
                 y_v += (self.map.scale * dy)
 
-            deepth, offset = (deepth_h, y_h) if deepth_h < deepth_v else (deepth_v, x_v)
+            deepth = x = y = 0
+            offset = 0
 
-            deepth *= calc_cos(self.player.angle - curent_angel)
-            proj_height = max((3 * self.player.proj_dist * self.map.scale) / deepth, 0.00001)
+            if deepth_h < deepth_v:
+                deepth, x, y = deepth_h, x_h, y_h
+                offset = y_h
+                prev_x = x_h
+                prev_y = y_h + self.map.scale
+            else:
+                deepth, x, y = deepth_v, x_v, y_v
+                offset = x_v
+                prev_x = x_v + self.map.scale
+                prev_y = y_v
+
+            scale_x, scale_y = self.map.rescale_coord(x, y)
+
+            # self.canvas.create_oval(
+            #     *circl_coords(scale_x * self.map.scale * self.map.mm_w_scale, scale_y * self.map.scale * self.map.mm_h_scale, 7),
+            #     fill='red',
+            #     outline=''
+            # )
+
+            self.canvas.create_line(
+                self.player.pos_x * self.map.mm_w_scale,
+                self.player.pos_y * self.map.mm_h_scale,
+                scale_x * self.map.scale * self.map.mm_w_scale,
+                scale_y * self.map.scale * self.map.mm_h_scale,
+                fill='red'
+            )
+
+            scale_x_next, scale_y_next = self.map.rescale_coord(prev_x, prev_y)
+            # self.canvas.create_oval(
+            #     *circl_coords(scale_x_next * self.map.scale * self.map.mm_w_scale, scale_y_next * self.map.scale * self.map.mm_h_scale, 7),
+            #     fill='red',
+            #     outline=''
+            # )
+
+            self.canvas.create_line(
+                self.player.pos_x * self.map.mm_w_scale,
+                self.player.pos_y * self.map.mm_h_scale,
+                scale_x_next * self.map.scale * self.map.mm_w_scale,
+                scale_y_next * self.map.scale * self.map.mm_h_scale,
+                fill='red'
+            )
+
+            # self.canvas.create_line(
+            #     self.player.pos_x * self.map.mm_w_scale,
+            #     self.player.pos_y * self.map.mm_h_scale,
+            #     self.player.pos_x * self.map.mm_w_scale + cos_a * deepth * self.map.mm_w_scale,
+            #     self.player.pos_y * self.map.mm_h_scale + sin_a * deepth * self.map.mm_h_scale,
+            #     fill='gray'
+            # )
+
+            # ------------------ Прямоугольники -------------------------
+
+            if (scale_x, scale_y) not in drawed_walls:
+                drawed_walls.append((scale_x, scale_y))
+
+                right_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x, scale_y)
+                left_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
+                among_deepth = self.get_line_lenght(scale_x, scale_y, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
+
+                wall_degree = ((right_deepth ** 2) + (left_deepth ** 2) - (among_deepth ** 2)) / (2 * right_deepth * left_deepth)
+                rel_degree = math.degrees(math.acos(wall_degree))
+
+                wall_width = rel_degree // (self.player.fov / self.player.rays_count)
+
+                # right_deepth *= calc_cos(self.player.angle - curent_angel)
+                # left_deepth *= calc_cos(self.player.angle - curent_angel)
+
+                right_side_height = max((3 * self.player.proj_dist * self.map.scale) / right_deepth, 0.00001)
+                left_side_height = max((3 * self.player.proj_dist * self.map.scale) / left_deepth, 0.00001)
+
+                wall_polygon = (
+                    ray * self.win_scale,
+                    (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+
+                    ray * self.win_scale + wall_width * self.win_scale,
+                    (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
+
+                    ray * self.win_scale + wall_width * self.win_scale,
+                    (self.map.win_height // 2) - left_side_height // 2,
+
+                    ray * self.win_scale,
+                    (self.map.win_height // 2) - right_side_height // 2
+                )
+
+                self.canvas.create_polygon(
+                    wall_polygon,
+                    fill='gray',
+                    outline=''
+                )
 
             # self.canvas.create_rectangle(
             #     ray * self.win_scale,
@@ -165,16 +268,16 @@ class Camera:
             #     outline=''
             # )
 
-            texture_width = int((int(offset) % self.map.scale) * self.texture_scale)
-            self.image_links.append(self.get_image(texture_width, int(proj_height)))
+            # ------------------ Текстуры -------------------------
+            # texture_width = int((int(offset) % self.map.scale) * self.texture_scale)
+            # self.image_links.append(self.get_image(texture_width, int(proj_height)))
 
-            self.canvas.create_image(
-                (ray * self.win_scale, (self.map.win_height // 2) - proj_height // 2), anchor=NW, image=self.image_links[ray]
-            )
+            # self.canvas.create_image(
+            #     (ray * self.win_scale, (self.map.win_height // 2) - proj_height // 2), anchor=NW, image=self.image_links[ray]
+            # )
 
-            curent_angel += self.player.fov / self.player.rays_count
+            curent_angel += (self.player.fov / self.player.rays_count)
 
-        self.draw_mini_map()
 
         self.canvas.create_text(
             self.map.win_width - 25,

@@ -29,6 +29,15 @@ def frange(start, stop=None, step=None):
         count += 1
 
 
+def circl_coords(x: int, y: int, diagonal: int) -> tuple:
+    """
+        Метод вовзвращает координаты круга с заданной
+        начальной точкой и диагональю
+    """
+    half_diagonal = diagonal // 2
+    return (x - half_diagonal, y - half_diagonal, x + half_diagonal, y + half_diagonal)
+
+
 @lru_cache(maxsize=2048)
 def calc_sin(degree):
     return math.sin(math.radians(degree))
