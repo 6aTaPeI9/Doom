@@ -7,4 +7,4 @@
 SCALE = 64
 
 # Размер миникарты 1/5 от общего размера
-MINI_MAP_SCALE = 0.2
+MINI_MAP_SCALE = 1

@@ -31,10 +31,11 @@ class GameField:
         """
         for row_id, row in enumerate(self.map):
             for ceil_id, ceil in enumerate(row):
-                    if not ceil == CeillType.WALL:
-                        continue
+                print(str(ceil))
+                if not str(ceil) == CeillType.WALL:
+                    continue
 
-                    self.map_set.add((ceil_id, row_id))
+                self.map_set.add((ceil_id, row_id))
 
         return
 
@@ -59,14 +60,19 @@ class GameField:
         return (int(x // self.scale), int(y // self.scale))
 
 
-    def check_barrier(self, x, y, scale: bool = True):
+    def check_barrier(self, x, y, scale: bool = True, with_val: bool = False):
         """
             Проверка координат на наличие препятствия
         """
         if scale:
             x, y = self.rescale_coord(x, y)
 
-        return (x, y) in self.map_set
+        val = (x, y) in self.map_set
+
+        if with_val and val:
+            return self.map[y][x]
+        else:
+            return bool(val)
 
 
     def resize(self, win_width, win_height):

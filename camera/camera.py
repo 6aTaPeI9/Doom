@@ -9,7 +9,7 @@ from functools import lru_cache
 from tkinter import NW
 from PIL import ImageTk, Image
 from tools import calc_cos, calc_sin, circl_coords
-from game_map.walls import CeillType
+from game_map.walls import CeillType, Wall
 
 
 class Camera:
@@ -48,14 +48,15 @@ class Camera:
 
                 if ceil == CeillType.EMPTY:
                     continue
-                elif ceil == CeillType.WALL:
+                elif str(ceil) == CeillType.WALL:
                     # Верняя левая точка клетки
                     self.canvas.create_rectangle(
                         ceil_x,
                         ceil_y,
                         ceil_x + self.map.ceil_width,
                         ceil_y + self.map.ceil_height,
-                        fill='white'
+                        fill=ceil.color if type(ceil) == Wall else 'white',
+                        outline=''
                     )
 
         # Рисуем границу мини-карты
@@ -106,10 +107,10 @@ class Camera:
 
     def redraw_evet(self):
         start_time = time.time()
-        self.draw_mini_map()
 
         curent_angel = self.player.angle - self.player.fov // 2
         ray_len = 50
+        self.draw_mini_map()
 
         xm = (self.player.pos_x // self.map.scale) * self.map.scale
         ym = (self.player.pos_y // self.map.scale) * self.map.scale
@@ -140,7 +141,9 @@ class Camera:
                 deepth_h = (x_h - self.player.pos_x) / cos_a
                 y_h = self.player.pos_y + deepth_h * sin_a
 
-                if self.map.check_barrier((x_h + dx), y_h, True):
+                texture = self.map.check_barrier((x_h + dx), y_h, True, True)
+
+                if texture:
                     break
 
                 x_h += (self.map.scale * dx)
@@ -161,7 +164,9 @@ class Camera:
                 deepth_v = (y_v - self.player.pos_y) / sin_a
                 x_v = self.player.pos_x + deepth_v * cos_a
 
-                if self.map.check_barrier(x_v, (y_v + dy), True):
+                texture = self.map.check_barrier(x_v, (y_v + dy), True, True)
+
+                if texture:
                     break
 
                 y_v += (self.map.scale * dy)
@@ -189,10 +194,10 @@ class Camera:
             # )
 
             self.canvas.create_line(
-                self.player.pos_x * self.map.mm_w_scale,
-                self.player.pos_y * self.map.mm_h_scale,
-                scale_x * self.map.scale * self.map.mm_w_scale,
-                scale_y * self.map.scale * self.map.mm_h_scale,
+                self.map.mm_start_x + self.player.pos_x * self.map.mm_w_scale,
+                self.map.mm_start_y + self.player.pos_y * self.map.mm_h_scale,
+                self.map.mm_start_x + scale_x * self.map.scale * self.map.mm_w_scale,
+                self.map.mm_start_y + scale_y * self.map.scale * self.map.mm_h_scale,
                 fill='red'
             )
 
@@ -204,10 +209,10 @@ class Camera:
             # )
 
             self.canvas.create_line(
-                self.player.pos_x * self.map.mm_w_scale,
-                self.player.pos_y * self.map.mm_h_scale,
-                scale_x_next * self.map.scale * self.map.mm_w_scale,
-                scale_y_next * self.map.scale * self.map.mm_h_scale,
+                self.map.mm_start_x + self.player.pos_x * self.map.mm_w_scale,
+                self.map.mm_start_y + self.player.pos_y * self.map.mm_h_scale,
+                self.map.mm_start_x + scale_x_next * self.map.scale * self.map.mm_w_scale,
+                self.map.mm_start_y + scale_y_next * self.map.scale * self.map.mm_h_scale,
                 fill='red'
             )
 
@@ -253,11 +258,12 @@ class Camera:
                     (self.map.win_height // 2) - right_side_height // 2
                 )
 
-                self.canvas.create_polygon(
-                    wall_polygon,
-                    fill='gray',
-                    outline=''
-                )
+                if texture:
+                    self.canvas.create_polygon(
+                        wall_polygon,
+                        fill=texture.color if type(texture) == Wall else 'white',
+                        outline=''
+                    )
 
             # self.canvas.create_rectangle(
             #     ray * self.win_scale,
