@@ -126,12 +126,12 @@ class Camera:
             y = sin_a * ray_len
 
             if cos_a >= 0:
-                # луч направлен влево
+                # луч направлен право
                 dx = 1
                 # X по горизонтали
                 x_h = xm + self.map.scale
             else:
-                # луч направлен вправо
+                # луч направлен влево
                 dx = -1
                 x_h = xm
 
@@ -140,7 +140,7 @@ class Camera:
                 deepth_h = (x_h - self.player.pos_x) / cos_a
                 y_h = self.player.pos_y + deepth_h * sin_a
 
-                texture = self.map.check_barrier((x_h + 1), y_h, True, True)
+                texture = self.map.check_barrier((x_h + dx), y_h, True, True)
 
                 if texture:
                     break
@@ -163,7 +163,7 @@ class Camera:
                 deepth_v = (y_v - self.player.pos_y) / sin_a
                 x_v = self.player.pos_x + deepth_v * cos_a
 
-                texture = self.map.check_barrier(x_v, (y_v + 1), True, True)
+                texture = self.map.check_barrier(x_v, (y_v + dy), True, True)
 
                 if texture:
                     break
@@ -241,7 +241,7 @@ class Camera:
                 wall_degree = abs(((right_deepth ** 2) + (left_deepth ** 2) - (among_deepth ** 2)) / (2 * right_deepth * left_deepth))
                 rel_degree = math.degrees(math.acos(wall_degree))
 
-                wall_width = rel_degree // (self.player.fov / self.player.rays_count)
+                wall_width = rel_degree / (self.player.fov / self.player.rays_count)
 
                 # right_deepth *= calc_cos(self.player.angle - curent_angel)
                 # left_deepth *= calc_cos(self.player.angle - curent_angel)
@@ -254,8 +254,9 @@ class Camera:
                 # x3 - верхний правый
                 # x4 - нижний праый
 
-                if (cos_a >= 0 and sin_a >= 0):
-                    wall_polygon = (
+                if cos_a >= 0:
+                    if sin_a >= 0:
+                        wall_polygon = (
                         ray * self.win_scale,
                         (self.map.win_height // 2) - left_side_height // 2,
 
@@ -268,24 +269,50 @@ class Camera:
                         ray * self.win_scale + wall_width * self.win_scale,
                         (self.map.win_height // 2) - right_side_height // 2,
                     )
+                    else:
+                        wall_polygon = (
+                            ray * self.win_scale,
+                            (self.map.win_height // 2) - right_side_height // 2,
+
+                            ray * self.win_scale,
+                            (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+
+                            ray * self.win_scale + wall_width * self.win_scale,
+                            (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
+
+                            ray * self.win_scale + wall_width * self.win_scale,
+                            (self.map.win_height // 2) - left_side_height // 2,
+                        )
                 else:
-                    wall_polygon = (
+                    if sin_a < 0:
+                        wall_polygon = (
                         ray * self.win_scale,
-                        (self.map.win_height // 2) - right_side_height // 2,
+                        (self.map.win_height // 2) - left_side_height // 2,
 
                         ray * self.win_scale,
-                        (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
-
-                        ray * self.win_scale + wall_width * self.win_scale,
                         (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
 
                         ray * self.win_scale + wall_width * self.win_scale,
-                        (self.map.win_height // 2) - left_side_height // 2,
+                        (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+
+                        ray * self.win_scale + wall_width * self.win_scale,
+                        (self.map.win_height // 2) - right_side_height // 2,
                     )
+                    else:
+                        wall_polygon = (
+                            ray * self.win_scale,
+                            (self.map.win_height // 2) - right_side_height // 2,
 
+                            ray * self.win_scale,
+                            (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
 
+                            ray * self.win_scale + wall_width * self.win_scale,
+                            (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
 
-
+                            ray * self.win_scale + wall_width * self.win_scale,
+                            (self.map.win_height // 2) - left_side_height // 2,
+                        )
+                    
                 if texture:
                     self.canvas.create_polygon(
                         wall_polygon,
@@ -293,6 +320,8 @@ class Camera:
                         outline=''
                     )
 
+            # deepth *= calc_cos(self.player.angle - curent_angel)
+            # proj_height = max((3 * self.player.proj_dist * self.map.scale) / deepth, 0.00001)
             # self.canvas.create_rectangle(
             #     ray * self.win_scale,
             #     (self.map.win_height // 2) - proj_height // 2,

@@ -12,7 +12,7 @@ ROTATION_SPEED = 5
 ANGLE = 0
 
 # Угол обзора игрока
-FOV = 60
+FOV = 90
 
 # Дальность обзора
 VIEW_RANGE = 300
