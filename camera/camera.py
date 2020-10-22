@@ -102,7 +102,7 @@ class Camera:
         """
             Метод возвращает длину отрезка по двум точкам
         """
-        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        return math.sqrt(abs((x2 - x1) ** 2 + (y2 - y1) ** 2))
 
 
     def redraw_evet(self):
@@ -110,7 +110,6 @@ class Camera:
 
         curent_angel = self.player.angle - self.player.fov // 2
         ray_len = 50
-        self.draw_mini_map()
 
         xm = (self.player.pos_x // self.map.scale) * self.map.scale
         ym = (self.player.pos_y // self.map.scale) * self.map.scale
@@ -141,7 +140,7 @@ class Camera:
                 deepth_h = (x_h - self.player.pos_x) / cos_a
                 y_h = self.player.pos_y + deepth_h * sin_a
 
-                texture = self.map.check_barrier((x_h + dx), y_h, True, True)
+                texture = self.map.check_barrier((x_h + 1), y_h, True, True)
 
                 if texture:
                     break
@@ -164,7 +163,7 @@ class Camera:
                 deepth_v = (y_v - self.player.pos_y) / sin_a
                 x_v = self.player.pos_x + deepth_v * cos_a
 
-                texture = self.map.check_barrier(x_v, (y_v + dy), True, True)
+                texture = self.map.check_barrier(x_v, (y_v + 1), True, True)
 
                 if texture:
                     break
@@ -229,11 +228,17 @@ class Camera:
             if (scale_x, scale_y) not in drawed_walls:
                 drawed_walls.append((scale_x, scale_y))
 
-                right_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x, scale_y)
-                left_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
-                among_deepth = self.get_line_lenght(scale_x, scale_y, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
+                # Вычисляем длину прямой до правого угла стены
+                right_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x * self.map.scale, scale_y * self.map.scale)
 
-                wall_degree = ((right_deepth ** 2) + (left_deepth ** 2) - (among_deepth ** 2)) / (2 * right_deepth * left_deepth)
+                # Вычисляем длину прямой до левого угла стены
+                left_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
+
+                # Вычисляем длину прямой между левым и правым углом стены
+                among_deepth = self.get_line_lenght(scale_x * self.map.scale, scale_y * self.map.scale, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
+
+                # Вычисляем угол по
+                wall_degree = abs(((right_deepth ** 2) + (left_deepth ** 2) - (among_deepth ** 2)) / (2 * right_deepth * left_deepth))
                 rel_degree = math.degrees(math.acos(wall_degree))
 
                 wall_width = rel_degree // (self.player.fov / self.player.rays_count)
@@ -244,19 +249,42 @@ class Camera:
                 right_side_height = max((3 * self.player.proj_dist * self.map.scale) / right_deepth, 0.00001)
                 left_side_height = max((3 * self.player.proj_dist * self.map.scale) / left_deepth, 0.00001)
 
-                wall_polygon = (
-                    ray * self.win_scale,
-                    (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+                # x1 - нижний левый
+                # x2 - верхний правый
+                # x3 - верхний правый
+                # x4 - нижний праый
 
-                    ray * self.win_scale + wall_width * self.win_scale,
-                    (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
+                if (cos_a >= 0 and sin_a >= 0):
+                    wall_polygon = (
+                        ray * self.win_scale,
+                        (self.map.win_height // 2) - left_side_height // 2,
 
-                    ray * self.win_scale + wall_width * self.win_scale,
-                    (self.map.win_height // 2) - left_side_height // 2,
+                        ray * self.win_scale,
+                        (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
 
-                    ray * self.win_scale,
-                    (self.map.win_height // 2) - right_side_height // 2
-                )
+                        ray * self.win_scale + wall_width * self.win_scale,
+                        (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+
+                        ray * self.win_scale + wall_width * self.win_scale,
+                        (self.map.win_height // 2) - right_side_height // 2,
+                    )
+                else:
+                    wall_polygon = (
+                        ray * self.win_scale,
+                        (self.map.win_height // 2) - right_side_height // 2,
+
+                        ray * self.win_scale,
+                        (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+
+                        ray * self.win_scale + wall_width * self.win_scale,
+                        (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
+
+                        ray * self.win_scale + wall_width * self.win_scale,
+                        (self.map.win_height // 2) - left_side_height // 2,
+                    )
+
+
+
 
                 if texture:
                     self.canvas.create_polygon(
@@ -284,6 +312,7 @@ class Camera:
 
             curent_angel += (self.player.fov / self.player.rays_count)
 
+        self.draw_mini_map()
 
         self.canvas.create_text(
             self.map.win_width - 25,
