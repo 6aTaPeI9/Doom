@@ -74,7 +74,7 @@ class Game(Canvas):
             self.width = self.winfo_reqwidth()
 
         self.config(width=self.width, height=self.height)
-        
+
         # Пересчитываем все параметры карты зависящие от размеров окна
         self.map.resize(self.width, self.height)
 

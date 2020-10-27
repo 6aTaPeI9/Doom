@@ -121,26 +121,32 @@ class Camera:
             cos_a = calc_cos(curent_angel) or 0.000001
             sin_a = calc_sin(curent_angel) or 0.000001
 
-
-            x = cos_a * ray_len
-            y = sin_a * ray_len
-
+            # cos = y. cos(90...0, 0...270) >= 0
+            # dx - смещение по горизонтали. Смотрим всегда на 1 блок вперед.
+            # x_h - ближайшая точка пересечения на вертикальной оси.
             if cos_a >= 0:
-                # луч направлен право
+                # Луч направлен право.
                 dx = 1
-                # X по горизонтали
                 x_h = xm + self.map.scale
             else:
-                # луч направлен влево
+                # Луч направлен влево
                 dx = -1
                 x_h = xm
 
             for _ in range(0, self.map.scaled_width, self.map.scale):
-                # Вычисляем расстояние луча до ближайшего пересечения
+                # Вычисляем гипотенузу по углу и прилегающему катету.
                 deepth_h = (x_h - self.player.pos_x) / cos_a
+
+                # ближайшая точка пересечения на горизонтальной оси
                 y_h = self.player.pos_y + deepth_h * sin_a
 
                 texture = self.map.check_barrier((x_h + dx), y_h, True, True)
+
+                self.canvas.create_oval(
+                        *circl_coords((x_h + dx) * self.map.scale * self.map.mm_w_scale, y_h * self.map.scale * self.map.mm_h_scale, 7),
+                        fill='red',
+                        outline=''
+                )
 
                 if texture:
                     break
@@ -148,22 +154,32 @@ class Camera:
                 x_h += (self.map.scale * dx)
 
 
-            if sin_a >= 0:
-                # луч направлен вверх
-                dy = 1
-                # X по горизонтали
-                y_v = ym + self.map.scale
-            else:
+            # sin = x. sin(0...180) >= 0
+            # dy - смещение по вертикали. Смотрим всегда на 1 блок вперед.
+            # y_v - ближайшая точка пересечения на горизонтальной оси.
+            if sin_a < 0:
                 # луч направлен вниз
                 dy = -1
                 y_v = ym
+            else:
+                # луч направлен вверх
+                dy = 1
+                y_v = ym + self.map.scale
+
 
             for _ in range(0, self.map.scaled_height, self.map.scale):
-                # Расстояние до ближайшей вертикальной стены и пересечение лучем вертикальной стены по y
+                # Вычисляем гипотенузу по углу и прилегающему катету.
                 deepth_v = (y_v - self.player.pos_y) / sin_a
+
+                # ближайшая точка пересечения на вертикальной оси
                 x_v = self.player.pos_x + deepth_v * cos_a
 
                 texture = self.map.check_barrier(x_v, (y_v + dy), True, True)
+                self.canvas.create_oval(
+                        *circl_coords(x_v // self.map.scale * self.map.scale * self.map.mm_w_scale, y_h // self.map.scale * self.map.scale * self.map.mm_h_scale, 7),
+                        fill='red',
+                        outline=''
+                    )
 
                 if texture:
                     break
@@ -186,11 +202,11 @@ class Camera:
 
             scale_x, scale_y = self.map.rescale_coord(x, y)
 
-            # self.canvas.create_oval(
-            #     *circl_coords(scale_x * self.map.scale * self.map.mm_w_scale, scale_y * self.map.scale * self.map.mm_h_scale, 7),
-            #     fill='red',
-            #     outline=''
-            # )
+            self.canvas.create_oval(
+                *circl_coords(scale_x // self.map.scale * self.map.scale * self.map.mm_w_scale, scale_y // self.map.scale * self.map.scale * self.map.mm_h_scale, 7),
+                fill='red',
+                outline=''
+            )
 
             self.canvas.create_line(
                 self.map.mm_start_x + self.player.pos_x * self.map.mm_w_scale,
@@ -201,11 +217,11 @@ class Camera:
             )
 
             scale_x_next, scale_y_next = self.map.rescale_coord(prev_x, prev_y)
-            # self.canvas.create_oval(
-            #     *circl_coords(scale_x_next * self.map.scale * self.map.mm_w_scale, scale_y_next * self.map.scale * self.map.mm_h_scale, 7),
-            #     fill='red',
-            #     outline=''
-            # )
+            self.canvas.create_oval(
+                *circl_coords(scale_x_next * self.map.scale * self.map.mm_w_scale, scale_y_next * self.map.scale * self.map.mm_h_scale, 7),
+                fill='red',
+                outline=''
+            )
 
             self.canvas.create_line(
                 self.map.mm_start_x + self.player.pos_x * self.map.mm_w_scale,
@@ -215,121 +231,121 @@ class Camera:
                 fill='red'
             )
 
-            # self.canvas.create_line(
-            #     self.player.pos_x * self.map.mm_w_scale,
-            #     self.player.pos_y * self.map.mm_h_scale,
-            #     self.player.pos_x * self.map.mm_w_scale + cos_a * deepth * self.map.mm_w_scale,
-            #     self.player.pos_y * self.map.mm_h_scale + sin_a * deepth * self.map.mm_h_scale,
-            #     fill='gray'
-            # )
+            self.canvas.create_line(
+                self.player.pos_x * self.map.mm_w_scale,
+                self.player.pos_y * self.map.mm_h_scale,
+                self.player.pos_x * self.map.mm_w_scale + cos_a * deepth * self.map.mm_w_scale,
+                self.player.pos_y * self.map.mm_h_scale + sin_a * deepth * self.map.mm_h_scale,
+                fill='gray'
+            )
 
             # ------------------ Прямоугольники -------------------------
 
-            if (scale_x, scale_y) not in drawed_walls:
-                drawed_walls.append((scale_x, scale_y))
+            # if (scale_x, scale_y) not in drawed_walls:
+            #     drawed_walls.append((scale_x, scale_y))
 
-                # Вычисляем длину прямой до правого угла стены
-                right_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x * self.map.scale, scale_y * self.map.scale)
+            #     # Вычисляем длину прямой до правого угла стены
+            #     right_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x * self.map.scale, scale_y * self.map.scale)
 
-                # Вычисляем длину прямой до левого угла стены
-                left_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
+            #     # Вычисляем длину прямой до левого угла стены
+            #     left_deepth = self.get_line_lenght(self.player.pos_x, self.player.pos_y, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
 
-                # Вычисляем длину прямой между левым и правым углом стены
-                among_deepth = self.get_line_lenght(scale_x * self.map.scale, scale_y * self.map.scale, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
+            #     # Вычисляем длину прямой между левым и правым углом стены
+            #     among_deepth = self.get_line_lenght(scale_x * self.map.scale, scale_y * self.map.scale, scale_x_next * self.map.scale, scale_y_next * self.map.scale)
 
-                # Вычисляем угол по
-                wall_degree = abs(((right_deepth ** 2) + (left_deepth ** 2) - (among_deepth ** 2)) / (2 * right_deepth * left_deepth))
-                rel_degree = math.degrees(math.acos(wall_degree))
+            #     # Вычисляем угол по
+            #     wall_degree = abs(((right_deepth ** 2) + (left_deepth ** 2) - (among_deepth ** 2)) / (2 * right_deepth * left_deepth))
+            #     rel_degree = math.degrees(math.acos(wall_degree))
 
-                wall_width = rel_degree / (self.player.fov / self.player.rays_count)
+            #     wall_width = rel_degree / (self.player.fov / self.player.rays_count)
 
-                # right_deepth *= calc_cos(self.player.angle - curent_angel)
-                # left_deepth *= calc_cos(self.player.angle - curent_angel)
+            #     # right_deepth *= calc_cos(self.player.angle - curent_angel)
+            #     # left_deepth *= calc_cos(self.player.angle - curent_angel)
 
-                right_side_height = max((3 * self.player.proj_dist * self.map.scale) / right_deepth, 0.00001)
-                left_side_height = max((3 * self.player.proj_dist * self.map.scale) / left_deepth, 0.00001)
+            #     right_side_height = max((3 * self.player.proj_dist * self.map.scale) / right_deepth, 0.00001)
+            #     left_side_height = max((3 * self.player.proj_dist * self.map.scale) / left_deepth, 0.00001)
 
-                # x1 - нижний левый
-                # x2 - верхний правый
-                # x3 - верхний правый
-                # x4 - нижний праый
+            #     # x1 - нижний левый
+            #     # x2 - верхний правый
+            #     # x3 - верхний правый
+            #     # x4 - нижний праый
 
-                if cos_a >= 0:
-                    if sin_a >= 0:
-                        wall_polygon = (
-                        ray * self.win_scale,
-                        (self.map.win_height // 2) - left_side_height // 2,
+            #     if cos_a >= 0:
+            #         if sin_a >= 0:
+            #             wall_polygon = (
+            #             ray * self.win_scale,
+            #             (self.map.win_height // 2) - left_side_height // 2,
 
-                        ray * self.win_scale,
-                        (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
+            #             ray * self.win_scale,
+            #             (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
 
-                        ray * self.win_scale + wall_width * self.win_scale,
-                        (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+            #             ray * self.win_scale + wall_width * self.win_scale,
+            #             (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
 
-                        ray * self.win_scale + wall_width * self.win_scale,
-                        (self.map.win_height // 2) - right_side_height // 2,
-                    )
-                    else:
-                        wall_polygon = (
-                            ray * self.win_scale,
-                            (self.map.win_height // 2) - right_side_height // 2,
+            #             ray * self.win_scale + wall_width * self.win_scale,
+            #             (self.map.win_height // 2) - right_side_height // 2,
+            #         )
+            #         else:
+            #             wall_polygon = (
+            #                 ray * self.win_scale,
+            #                 (self.map.win_height // 2) - right_side_height // 2,
 
-                            ray * self.win_scale,
-                            (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+            #                 ray * self.win_scale,
+            #                 (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
 
-                            ray * self.win_scale + wall_width * self.win_scale,
-                            (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
+            #                 ray * self.win_scale + wall_width * self.win_scale,
+            #                 (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
 
-                            ray * self.win_scale + wall_width * self.win_scale,
-                            (self.map.win_height // 2) - left_side_height // 2,
-                        )
-                else:
-                    if sin_a < 0:
-                        wall_polygon = (
-                        ray * self.win_scale,
-                        (self.map.win_height // 2) - left_side_height // 2,
+            #                 ray * self.win_scale + wall_width * self.win_scale,
+            #                 (self.map.win_height // 2) - left_side_height // 2,
+            #             )
+            #     else:
+            #         if sin_a < 0:
+            #             wall_polygon = (
+            #             ray * self.win_scale,
+            #             (self.map.win_height // 2) - left_side_height // 2,
 
-                        ray * self.win_scale,
-                        (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
+            #             ray * self.win_scale,
+            #             (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
 
-                        ray * self.win_scale + wall_width * self.win_scale,
-                        (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+            #             ray * self.win_scale + wall_width * self.win_scale,
+            #             (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
 
-                        ray * self.win_scale + wall_width * self.win_scale,
-                        (self.map.win_height // 2) - right_side_height // 2,
-                    )
-                    else:
-                        wall_polygon = (
-                            ray * self.win_scale,
-                            (self.map.win_height // 2) - right_side_height // 2,
+            #             ray * self.win_scale + wall_width * self.win_scale,
+            #             (self.map.win_height // 2) - right_side_height // 2,
+            #         )
+            #         else:
+            #             wall_polygon = (
+            #                 ray * self.win_scale,
+            #                 (self.map.win_height // 2) - right_side_height // 2,
 
-                            ray * self.win_scale,
-                            (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
+            #                 ray * self.win_scale,
+            #                 (self.map.win_height // 2) - right_side_height // 2 + right_side_height,
 
-                            ray * self.win_scale + wall_width * self.win_scale,
-                            (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
+            #                 ray * self.win_scale + wall_width * self.win_scale,
+            #                 (self.map.win_height // 2) - left_side_height // 2 + left_side_height,
 
-                            ray * self.win_scale + wall_width * self.win_scale,
-                            (self.map.win_height // 2) - left_side_height // 2,
-                        )
-                    
-                if texture:
-                    self.canvas.create_polygon(
-                        wall_polygon,
-                        fill=texture.color if type(texture) == Wall else 'white',
-                        outline=''
-                    )
+            #                 ray * self.win_scale + wall_width * self.win_scale,
+            #                 (self.map.win_height // 2) - left_side_height // 2,
+            #             )
 
-            # deepth *= calc_cos(self.player.angle - curent_angel)
-            # proj_height = max((3 * self.player.proj_dist * self.map.scale) / deepth, 0.00001)
-            # self.canvas.create_rectangle(
-            #     ray * self.win_scale,
-            #     (self.map.win_height // 2) - proj_height // 2,
-            #     ray * self.win_scale + self.win_scale,
-            #     (self.map.win_height // 2) - proj_height // 2 + proj_height,
-            #     fill='gray',
-            #     outline=''
-            # )
+            #     if texture:
+            #         self.canvas.create_polygon(
+            #             wall_polygon,
+            #             fill=texture.color if type(texture) == Wall else 'white',
+            #             outline=''
+            #         )
+
+            deepth *= calc_cos(self.player.angle - curent_angel)
+            proj_height = max((3 * self.player.proj_dist * self.map.scale) / deepth, 0.00001)
+            self.canvas.create_rectangle(
+                ray * self.win_scale,
+                (self.map.win_height // 2) - proj_height // 2,
+                ray * self.win_scale + self.win_scale,
+                (self.map.win_height // 2) - proj_height // 2 + proj_height,
+                fill=texture.color if type(texture) == Wall else 'gray',
+                outline=''
+            )
 
             # ------------------ Текстуры -------------------------
             # texture_width = int((int(offset) % self.map.scale) * self.texture_scale)
