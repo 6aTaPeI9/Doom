@@ -67,6 +67,9 @@ class GameField:
         if scale:
             x, y = self.rescale_coord(x, y)
 
+        if (x, y) == (4, 1):
+            pass
+
         val = (x, y) in self.map_set
 
         if with_val and val:

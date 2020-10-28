@@ -117,6 +117,8 @@ class Camera:
         self.image_links = []
         drawed_walls = []
 
+        self.draw_mini_map()
+
         for ray in range(self.player.rays_count):
             cos_a = calc_cos(curent_angel) or 0.000001
             sin_a = calc_sin(curent_angel) or 0.000001
@@ -133,7 +135,9 @@ class Camera:
                 dx = -1
                 x_h = xm
 
+            cnt = 0
             for _ in range(0, self.map.scaled_width, self.map.scale):
+                cnt += 1
                 # Вычисляем гипотенузу по углу и прилегающему катету.
                 deepth_h = (x_h - self.player.pos_x) / cos_a
 
@@ -142,16 +146,34 @@ class Camera:
 
                 texture = self.map.check_barrier((x_h + dx), y_h, True, True)
 
-                self.canvas.create_oval(
-                        *circl_coords((x_h + dx) * self.map.scale * self.map.mm_w_scale, y_h * self.map.scale * self.map.mm_h_scale, 7),
-                        fill='red',
-                        outline=''
-                )
+                # При выходе за границы, прерываем цикл
+                if y_h < 0 or y_h > self.map.scaled_height:
+                    break
+
+                # self.canvas.create_rectangle(
+                #         (x_h + dx) // self.map.scale * self.map.scale * self.map.mm_w_scale + 10,
+                #         y_h // self.map.scale * self.map.scale * self.map.mm_h_scale + 10,
+                #         ((x_h + dx) // self.map.scale * self.map.scale * self.map.mm_w_scale) + self.map.ceil_width - 10,
+                #         (y_h // self.map.scale * self.map.scale * self.map.mm_h_scale) + self.map.ceil_height - 10,
+                #         fill='blue'
+                # )
+
+                # self.canvas.create_oval(
+                #         *circl_coords(
+                #             (x_h + dx) * self.map.mm_w_scale,
+                #             y_h * self.map.mm_h_scale,
+                #             7
+                #         ),
+                #         fill='white',
+                #         outline=''
+                # )
 
                 if texture:
                     break
 
                 x_h += (self.map.scale * dx)
+
+            print('cnt: ', cnt)
 
 
             # sin = x. sin(0...180) >= 0
@@ -168,25 +190,44 @@ class Camera:
 
 
             for _ in range(0, self.map.scaled_height, self.map.scale):
+                if sin_a > 0:
+                    pass
+
                 # Вычисляем гипотенузу по углу и прилегающему катету.
                 deepth_v = (y_v - self.player.pos_y) / sin_a
 
                 # ближайшая точка пересечения на вертикальной оси
                 x_v = self.player.pos_x + deepth_v * cos_a
 
-                texture = self.map.check_barrier(x_v, (y_v + dy), True, True)
+                texture = self.map.check_barrier(x_v, (y_v + dx), True, True)
+
+                # При выходе за границы, прерываем цикл
+                if x_v < 0 or x_v > self.map.scaled_width:
+                    break
+
+                # self.canvas.create_rectangle(
+                #         x_v // self.map.scale * self.map.scale * self.map.mm_w_scale + 10,
+                #         (y_v + dy) // self.map.scale * self.map.scale * self.map.mm_h_scale + 10,
+                #         (x_v // self.map.scale * self.map.scale * self.map.mm_w_scale) + self.map.ceil_width - 10,
+                #         ((y_v + dy) // self.map.scale * self.map.scale * self.map.mm_h_scale) + self.map.ceil_height - 10,
+                #         fill='red'
+                # )
+
                 self.canvas.create_oval(
-                        *circl_coords(x_v // self.map.scale * self.map.scale * self.map.mm_w_scale, y_h // self.map.scale * self.map.scale * self.map.mm_h_scale, 7),
-                        fill='red',
+                        *circl_coords(
+                            x_v * self.map.mm_w_scale,
+                            (y_v + dy) * self.map.mm_h_scale, 7
+                        ),
+                        fill='orange',
                         outline=''
-                    )
+                )
 
                 if texture:
                     break
 
+
                 y_v += (self.map.scale * dy)
 
-            deepth = x = y = 0
             offset = 0
 
             if deepth_h < deepth_v:
@@ -203,7 +244,11 @@ class Camera:
             scale_x, scale_y = self.map.rescale_coord(x, y)
 
             self.canvas.create_oval(
-                *circl_coords(scale_x // self.map.scale * self.map.scale * self.map.mm_w_scale, scale_y // self.map.scale * self.map.scale * self.map.mm_h_scale, 7),
+                *circl_coords(
+                    self.map.mm_start_x + scale_x // self.map.scale * self.map.scale * self.map.mm_w_scale,
+                    self.map.mm_start_y + scale_y // self.map.scale * self.map.scale * self.map.mm_h_scale,
+                    7
+                ),
                 fill='red',
                 outline=''
             )
@@ -218,7 +263,11 @@ class Camera:
 
             scale_x_next, scale_y_next = self.map.rescale_coord(prev_x, prev_y)
             self.canvas.create_oval(
-                *circl_coords(scale_x_next * self.map.scale * self.map.mm_w_scale, scale_y_next * self.map.scale * self.map.mm_h_scale, 7),
+                *circl_coords(
+                    self.map.mm_start_x + scale_x_next * self.map.scale * self.map.mm_w_scale,
+                    self.map.mm_start_y + scale_y_next * self.map.scale * self.map.mm_h_scale,
+                    7
+                ),
                 fill='red',
                 outline=''
             )
@@ -232,10 +281,10 @@ class Camera:
             )
 
             self.canvas.create_line(
-                self.player.pos_x * self.map.mm_w_scale,
-                self.player.pos_y * self.map.mm_h_scale,
-                self.player.pos_x * self.map.mm_w_scale + cos_a * deepth * self.map.mm_w_scale,
-                self.player.pos_y * self.map.mm_h_scale + sin_a * deepth * self.map.mm_h_scale,
+                self.map.mm_start_x + self.player.pos_x * self.map.mm_w_scale,
+                self.map.mm_start_y + self.player.pos_y * self.map.mm_h_scale,
+                self.map.mm_start_x + self.player.pos_x * self.map.mm_w_scale + cos_a * deepth * self.map.mm_w_scale,
+                self.map.mm_start_y + self.player.pos_y * self.map.mm_h_scale + sin_a * deepth * self.map.mm_h_scale,
                 fill='gray'
             )
 
@@ -336,16 +385,17 @@ class Camera:
             #             outline=''
             #         )
 
-            deepth *= calc_cos(self.player.angle - curent_angel)
-            proj_height = max((3 * self.player.proj_dist * self.map.scale) / deepth, 0.00001)
-            self.canvas.create_rectangle(
-                ray * self.win_scale,
-                (self.map.win_height // 2) - proj_height // 2,
-                ray * self.win_scale + self.win_scale,
-                (self.map.win_height // 2) - proj_height // 2 + proj_height,
-                fill=texture.color if type(texture) == Wall else 'gray',
-                outline=''
-            )
+            if texture:
+                deepth *= calc_cos(self.player.angle - curent_angel)
+                proj_height = max((3 * self.player.proj_dist * self.map.scale) / deepth, 0.00001)
+                self.canvas.create_rectangle(
+                    ray * self.win_scale,
+                    (self.map.win_height // 2) - proj_height // 2,
+                    ray * self.win_scale + self.win_scale,
+                    (self.map.win_height // 2) - proj_height // 2 + proj_height,
+                    fill=texture.color if type(texture) == Wall else 'gray',
+                    outline=''
+                )
 
             # ------------------ Текстуры -------------------------
             # texture_width = int((int(offset) % self.map.scale) * self.texture_scale)
@@ -356,8 +406,6 @@ class Camera:
             # )
 
             curent_angel += (self.player.fov / self.player.rays_count)
-
-        self.draw_mini_map()
 
         self.canvas.create_text(
             self.map.win_width - 25,
