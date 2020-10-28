@@ -26,8 +26,8 @@ class Game(Canvas):
         self.on_resize(None)
 
         self.player = Player(
-            101,
-            125,
+            275,
+            250,
             player_config.SPEED,
             player_config.ROTATION_SPEED,
             player_config.VIEW_RANGE,
