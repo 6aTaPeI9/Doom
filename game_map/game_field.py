@@ -31,7 +31,6 @@ class GameField:
         """
         for row_id, row in enumerate(self.map):
             for ceil_id, ceil in enumerate(row):
-                print(str(ceil))
                 if not str(ceil) == CeillType.WALL:
                     continue
 

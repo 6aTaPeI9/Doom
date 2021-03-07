@@ -26,7 +26,7 @@ class Player:
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.rotation_speed = rotation_speed
-        self.rays_count = 20 # TODO Вынести куда нибудь
+        self.rays_count = 120 # TODO Вынести куда нибудь
         self.proj_dist = self.rays_count / (2 * calc_tan(self.fov / 2)) # TODO Вынести куда нибудь
 
 
@@ -45,8 +45,8 @@ class Player:
             step = self.speed
         elif direction == Step.BACK:
             step = self.speed * -1
-        # else:
-        #     raise NotImplementedError(f'Движение в сторону {direction} невозможно.')
+        else:
+            raise NotImplementedError(f'Движение в сторону {direction} невозможно.')
 
         step_x = calc_cos(self.angle) * step
         step_y = calc_sin(self.angle) * step
@@ -69,8 +69,8 @@ class Player:
             self.angle -= self.rotation_speed
         elif rotate_side == Rotate.RIGHT:
             self.angle += self.rotation_speed
-        # else:
-        #     raise NotImplementedError(f'Изменение направления взгляда в сторону {rotate_side} невозможно.')
+        else:
+            raise NotImplementedError(f'Изменение направления взгляда в сторону {rotate_side} невозможно.')
 
     def resize(self):
         pass
